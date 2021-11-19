@@ -24,6 +24,7 @@ fn greedy_findmax(pomdp: &pomdp::POMDP, u: &mut std::collections::HashMap<String
     (result.0, u.clone())
 }
 
+#[allow(unused_macros)]
 macro_rules! iterative_policy_evaluation {
     ($a:expr, $b:expr, $c:expr) => {
         iterative_policy_evaluation($a, $b, $c, std::collections::HashMap::<String, f64>::new());
@@ -32,6 +33,8 @@ macro_rules! iterative_policy_evaluation {
         iterative_policy_evaluation($a, $b, $c, $d);
     }
 }
+
+#[allow(dead_code)]
 fn iterative_policy_evaluation(pomdp: pomdp::POMDP, pi: &String, k_max: i64, mut u: std::collections::HashMap<String, f64>) -> std::collections::HashMap<String, f64> {
     if u.len() == 0 {
         for i in 0..pomdp.s.len() {
@@ -47,7 +50,6 @@ fn iterative_policy_evaluation(pomdp: pomdp::POMDP, pi: &String, k_max: i64, mut
 }
 
 fn policy_evaluation(pomdp: &pomdp::POMDP, pi: &std::collections::HashMap<String, String>, mut u: std::collections::HashMap<String, f64>) -> std::collections::HashMap<String, f64> {
-    //u.insert("row_0_col_0".to_string(), -123.4);
     for _ in 0..1 {
         for (state, policy) in pi {
                 *u.entry(state.to_string()).or_insert(0.0) = pomdp.lookahead(&u, &state, &policy);
@@ -92,12 +94,62 @@ fn main() {
     let pomdp: pomdp::POMDP = hex_world::create_pomdp(0.9);
     //println!("{:?}", pomdp);
 
-    //println!("iterative_policy_evaluation value {:?}", iterative_policy_evaluation!(pomdp, &"E".to_string(), 4));
-
-    let mut policy = PolicyIteration { pi: std::collections::HashMap::<String, String>::new(), k_max: 10 };
-    policy.initialize(&pomdp, &"E".to_string());
-    policy_iteration(&pomdp, &mut policy);
-    println!("Optimal policy = {:?}", policy);
-
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn run_test<T>(test: T) -> () where T: FnOnce() -> () + std::panic::UnwindSafe {
+        let result = std::panic::catch_unwind(|| {
+            test()
+        });
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_iterative_policy_evaluation() {
+        run_test(|| {
+            let pomdp = hex_world::create_pomdp(0.9);
+            let return_value = iterative_policy_evaluation!(pomdp, &"E".to_string(), 4);
+            let mut expected = std::collections::HashMap::<String, f64>::new();
+            expected.insert("row_0_col_8".to_string(), -0.9530023239375);
+            expected.insert("row_0_col_18".to_string(), -3.439);
+            expected.insert("row_0_col_12".to_string(), -1.01587436495625);
+            expected.insert("row_2_col_18".to_string(), 10.0);
+            expected.insert("row_2_col_4".to_string(), -10.0);
+            let mut delta = 0.0;
+            for (key, value) in &expected {
+                assert!(return_value.contains_key(key));
+                delta += f64::powf(expected.get(key).unwrap() - return_value.get(key).unwrap(), 2.0).sqrt();
+                assert!(delta < 0.000001);
+            }
+            //println!("return {:?}", return_value);
+            //assert_eq!(return_value, expected);
+        })
+    }
+
+
+    #[test]
+    fn test_policy_iteration() {
+        run_test(|| {
+            let pomdp = hex_world::create_pomdp(0.9);
+            let mut policy = PolicyIteration { pi: std::collections::HashMap::<String, String>::new(), k_max: 10 };
+            policy.initialize(&pomdp, &"E".to_string());
+            policy_iteration(&pomdp, &mut policy);
+            let mut expected = std::collections::HashMap::<String, String>::new();
+            expected.insert("row_2_col_10".to_string(), "E".to_string());
+            expected.insert("row_2_col_0".to_string(), "NE".to_string());
+            expected.insert("row_1_col_17".to_string(), "SE".to_string());
+            expected.insert("row_2_col_2".to_string(), "NW".to_string());
+            expected.insert("row_0_col_16".to_string(), "SE".to_string());
+            for (key, value) in &expected {
+                assert!(policy.pi.contains_key(key));
+                assert!(policy.pi.get(key).unwrap() == expected.get(key).unwrap());
+            }
+            //println!("Optimal policy = {:?}", policy);
+            //assert!(false);
+        })
+    }
+
+}

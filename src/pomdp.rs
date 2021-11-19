@@ -9,6 +9,16 @@ pub struct POMDP {
     pub r: HashMap<(String, String), f64> // state, action = reward for performing action in state
 }
 
+impl Default for POMDP {
+    fn default() -> POMDP {
+        let states = Vec::<String>::new();
+        let actions = Vec::<String>::new();
+        let transitions = HashMap::<(String, String), HashMap<String, f64>>::new();
+        let rewards = HashMap::<(String, String), f64>::new();
+        POMDP { gamma: 1.0, s: states, a: actions, t: transitions, r: rewards}
+    }
+}
+
 impl POMDP {
     pub fn lookahead(&self, values: &HashMap<String, f64>, state: &String, action: &String) -> f64 {
         let mut sum: f64 = 0.0;
@@ -25,4 +35,5 @@ impl POMDP {
         *self.r.get(&(state.to_string(), action.to_string())).unwrap_or(&0.0) + self.gamma * sum
     }
 }
+
 
