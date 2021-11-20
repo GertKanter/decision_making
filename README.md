@@ -1,3 +1,3 @@
-# pomdp_example
+# Decision making algorithms in Rust
 
-Code shown in the video.
+Code accompanying the videos.

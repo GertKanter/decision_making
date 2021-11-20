@@ -1,6 +1,7 @@
 mod pomdp;
 mod hex_world;
 
+#[allow(dead_code)]
 fn findmax<F: Fn(String) -> f64>(collection: &Vec<String>, function: F) -> (String, f64) {
     // try each item in collection as arg for function and record the best result
     let mut best = std::f64::MIN;
@@ -17,6 +18,7 @@ fn findmax<F: Fn(String) -> f64>(collection: &Vec<String>, function: F) -> (Stri
     result
 }
 
+#[allow(dead_code)]
 fn greedy_findmax(pomdp: &pomdp::POMDP, u: &mut std::collections::HashMap<String, f64>, state: &String) -> (String, std::collections::HashMap<String, f64>) { 
     let maximize = findmax(&pomdp.a, |action| {pomdp.lookahead(&u, &state, &action)});
     let result = maximize;
@@ -49,6 +51,7 @@ fn iterative_policy_evaluation(pomdp: pomdp::POMDP, pi: &String, k_max: i64, mut
     u
 }
 
+#[allow(dead_code)]
 fn policy_evaluation(pomdp: &pomdp::POMDP, pi: &std::collections::HashMap<String, String>, mut u: std::collections::HashMap<String, f64>) -> std::collections::HashMap<String, f64> {
     for _ in 0..1 {
         for (state, policy) in pi {
@@ -65,6 +68,7 @@ struct PolicyIteration {
 }
 
 impl PolicyIteration {
+    #[allow(dead_code)]
     fn initialize(&mut self, pomdp: &pomdp::POMDP, default: &String) {
         for state in pomdp.s.iter() {
             self.pi.insert(state.to_string(), (&default).to_string());
@@ -72,6 +76,7 @@ impl PolicyIteration {
     }
 }
 
+#[allow(dead_code)]
 fn policy_iteration(pomdp: &pomdp::POMDP, m: &mut PolicyIteration) {
     let mut u: std::collections::HashMap<String, f64> = std::collections::HashMap::new();
     for i in 0..pomdp.s.len() {
@@ -91,7 +96,7 @@ fn policy_iteration(pomdp: &pomdp::POMDP, m: &mut PolicyIteration) {
 
 
 fn main() {
-    let pomdp: pomdp::POMDP = hex_world::create_pomdp(0.9);
+    //let pomdp: pomdp::POMDP = hex_world::create_pomdp(0.9);
     //println!("{:?}", pomdp);
 
 }

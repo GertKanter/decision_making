@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+#[allow(dead_code)]
 pub fn create_pomdp(gamma: f64) -> super::pomdp::POMDP {
     let mut states = Vec::new();//Vec::from(["r0c1" "state2"]);
     // Skip some cells. See "Algorithms for Decision Making" book, appendix F.1
