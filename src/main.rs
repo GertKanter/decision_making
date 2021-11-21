@@ -1,3 +1,4 @@
+mod mdp;
 mod pomdp;
 mod hex_world;
 
@@ -19,8 +20,8 @@ fn findmax<F: Fn(String) -> f64>(collection: &Vec<String>, function: F) -> (Stri
 }
 
 #[allow(dead_code)]
-fn greedy_findmax(pomdp: &pomdp::POMDP, u: &mut std::collections::HashMap<String, f64>, state: &String) -> (String, std::collections::HashMap<String, f64>) { 
-    let maximize = findmax(&pomdp.a, |action| {pomdp.lookahead(&u, &state, &action)});
+fn greedy_findmax(mdp: &mdp::MDP, u: &mut std::collections::HashMap<String, f64>, state: &String) -> (String, std::collections::HashMap<String, f64>) { 
+    let maximize = findmax(&mdp.a, |action| {mdp.lookahead(&u, &state, &action)});
     let result = maximize;
     u.insert(state.to_string(), result.1);
     (result.0, u.clone())
@@ -37,25 +38,25 @@ macro_rules! iterative_policy_evaluation {
 }
 
 #[allow(dead_code)]
-fn iterative_policy_evaluation(pomdp: pomdp::POMDP, pi: &String, k_max: i64, mut u: std::collections::HashMap<String, f64>) -> std::collections::HashMap<String, f64> {
+fn iterative_policy_evaluation(mdp: mdp::MDP, pi: &String, k_max: i64, mut u: std::collections::HashMap<String, f64>) -> std::collections::HashMap<String, f64> {
     if u.len() == 0 {
-        for i in 0..pomdp.s.len() {
-            u.insert(pomdp.s[i].clone(), 0.0);
+        for i in 0..mdp.s.len() {
+            u.insert(mdp.s[i].clone(), 0.0);
     }
     }
     for _ in 0..k_max {
-        for state in &pomdp.s {
-            *u.entry(state.to_string()).or_insert(0.0) = pomdp.lookahead(&u, &state, &pi.to_string());
+        for state in &mdp.s {
+            *u.entry(state.to_string()).or_insert(0.0) = mdp.lookahead(&u, &state, &pi.to_string());
         }
     }
     u
 }
 
 #[allow(dead_code)]
-fn policy_evaluation(pomdp: &pomdp::POMDP, pi: &std::collections::HashMap<String, String>, mut u: std::collections::HashMap<String, f64>) -> std::collections::HashMap<String, f64> {
+fn policy_evaluation(mdp: &mdp::MDP, pi: &std::collections::HashMap<String, String>, mut u: std::collections::HashMap<String, f64>) -> std::collections::HashMap<String, f64> {
     for _ in 0..1 {
         for (state, policy) in pi {
-                *u.entry(state.to_string()).or_insert(0.0) = pomdp.lookahead(&u, &state, &policy);
+                *u.entry(state.to_string()).or_insert(0.0) = mdp.lookahead(&u, &state, &policy);
         }
     }
     u
@@ -69,35 +70,38 @@ struct PolicyIteration {
 
 impl PolicyIteration {
     #[allow(dead_code)]
-    fn initialize(&mut self, pomdp: &pomdp::POMDP, default: &String) {
-        for state in pomdp.s.iter() {
+    fn initialize(&mut self, mdp: &mdp::MDP, default: &String) {
+        for state in mdp.s.iter() {
             self.pi.insert(state.to_string(), (&default).to_string());
         }
     }
 }
 
 #[allow(dead_code)]
-fn policy_iteration(pomdp: &pomdp::POMDP, m: &mut PolicyIteration) {
+fn policy_iteration(mdp: &mdp::MDP, m: &mut PolicyIteration) {
     let mut u: std::collections::HashMap<String, f64> = std::collections::HashMap::new();
-    for i in 0..pomdp.s.len() {
-        u.insert(pomdp.s[i].clone(), 0.0);
+    for i in 0..mdp.s.len() {
+        u.insert(mdp.s[i].clone(), 0.0);
     }
     let mut new_policy: std::collections::HashMap<String, String>= std::collections::HashMap::new();
     for _ in 0..m.k_max {
-        u = policy_evaluation(pomdp, &m.pi, u); // ("E", {})
+        u = policy_evaluation(mdp, &m.pi, u); // ("E", {})
         let mut new_state_policy;
         for (state, _) in &m.pi {
-            new_state_policy = greedy_findmax(pomdp, &mut u, &state);
+            new_state_policy = greedy_findmax(mdp, &mut u, &state);
             new_policy.insert(state.to_string(), new_state_policy.0);
         }
     }
     m.pi = new_policy;
 }
 
+#[allow(dead_code)]
+fn belief_update(pomdp: pomdp::POMDP, beliefs: std::collections::HashMap<String, f64>, a: String, o: String) {
+}
 
 fn main() {
-    //let pomdp: pomdp::POMDP = hex_world::create_pomdp(0.9);
-    //println!("{:?}", pomdp);
+    let mdp: mdp::MDP = hex_world::create_mdp(0.9);
+    //println!("{:?}", mdp);
 
 }
 
@@ -115,8 +119,8 @@ mod tests {
     #[test]
     fn test_iterative_policy_evaluation() {
         run_test(|| {
-            let pomdp = hex_world::create_pomdp(0.9);
-            let return_value = iterative_policy_evaluation!(pomdp, &"E".to_string(), 4);
+            let mdp = hex_world::create_mdp(0.9);
+            let return_value = iterative_policy_evaluation!(mdp, &"E".to_string(), 4);
             let mut expected = std::collections::HashMap::<String, f64>::new();
             expected.insert("row_0_col_8".to_string(), -0.9530023239375);
             expected.insert("row_0_col_18".to_string(), -3.439);
@@ -124,7 +128,7 @@ mod tests {
             expected.insert("row_2_col_18".to_string(), 10.0);
             expected.insert("row_2_col_4".to_string(), -10.0);
             let mut delta = 0.0;
-            for (key, value) in &expected {
+            for key in expected.keys() {
                 assert!(return_value.contains_key(key));
                 delta += f64::powf(expected.get(key).unwrap() - return_value.get(key).unwrap(), 2.0).sqrt();
                 assert!(delta < 0.000001);
@@ -138,17 +142,17 @@ mod tests {
     #[test]
     fn test_policy_iteration() {
         run_test(|| {
-            let pomdp = hex_world::create_pomdp(0.9);
+            let mdp = hex_world::create_mdp(0.9);
             let mut policy = PolicyIteration { pi: std::collections::HashMap::<String, String>::new(), k_max: 10 };
-            policy.initialize(&pomdp, &"E".to_string());
-            policy_iteration(&pomdp, &mut policy);
+            policy.initialize(&mdp, &"E".to_string());
+            policy_iteration(&mdp, &mut policy);
             let mut expected = std::collections::HashMap::<String, String>::new();
             expected.insert("row_2_col_10".to_string(), "E".to_string());
             expected.insert("row_2_col_0".to_string(), "NE".to_string());
             expected.insert("row_1_col_17".to_string(), "SE".to_string());
             expected.insert("row_2_col_2".to_string(), "NW".to_string());
             expected.insert("row_0_col_16".to_string(), "SE".to_string());
-            for (key, value) in &expected {
+            for key in expected.keys() {
                 assert!(policy.pi.contains_key(key));
                 assert!(policy.pi.get(key).unwrap() == expected.get(key).unwrap());
             }

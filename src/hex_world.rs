@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 #[allow(dead_code)]
-pub fn create_pomdp(gamma: f64) -> super::pomdp::POMDP {
+pub fn create_mdp(gamma: f64) -> super::mdp::MDP {
     let mut states = Vec::new();//Vec::from(["r0c1" "state2"]);
     // Skip some cells. See "Algorithms for Decision Making" book, appendix F.1
     let skip: Vec<String> = Vec::from(["row_1_col_7".to_string(), "row_1_col_11".to_string(), "row_1_col_13".to_string(), "row_2_col_8".to_string(), "row_2_col_16".to_string()]);
@@ -115,7 +115,7 @@ pub fn create_pomdp(gamma: f64) -> super::pomdp::POMDP {
         }
     }
 
-    super::pomdp::POMDP { gamma: gamma, s: states, a: actions, t: transitions, r: rewards}
+    super::mdp::MDP { gamma: gamma, s: states, a: actions, t: transitions, r: rewards}
 }
 
 fn make_target_state(from: &String, action: &String, states: &Vec<String>) -> Option<String> {
