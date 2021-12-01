@@ -2,6 +2,7 @@ mod mdp;
 mod pomdp;
 mod hex_world;
 mod crying_baby;
+mod util;
 
 #[allow(dead_code)]
 fn findmax<F: Fn(String) -> f64>(collection: &Vec<String>, function: F) -> (String, f64) {
@@ -96,32 +97,9 @@ fn policy_iteration(mdp: &mdp::MDP, m: &mut PolicyIteration) {
     m.pi = new_policy;
 }
 
-#[allow(dead_code, unused_variables)]
-fn fill(map: std::collections::HashMap<String, f64>, value: f64) -> std::collections::HashMap<String, f64> {
-    let mut return_value = std::collections::HashMap::<String, f64>::new();
-    for key in map.keys() {
-        return_value.insert(key.to_string(), 1.0);
-    }
-    return_value
-}
-
-fn normalize(map: &mut std::collections::HashMap<String, f64>, length: f64) -> std::collections::HashMap<String, f64> {
-    let mut return_value = std::collections::HashMap::<String, f64>::new();
-    let mut sum = 0.0;
-    for value in map.values() {
-        sum += value;
-    }
-    for (key, value) in map {
-        let x = ((*value) / sum) * length;
-        return_value.insert(key.to_string(), x);
-    }
-    return_value
-}
-
 #[allow(dead_code)]
 fn update_beliefs(pomdp: &pomdp::POMDP, beliefs: &mut std::collections::HashMap<String, f64>, a: &String, o: &String) {
     let original_values = beliefs.clone();
-    //let return_value = std::collections::HashMap::<String, f64>::new();
     for state in &pomdp.state_space { // every target state as s'
         if pomdp.observation_function.contains_key(&(o.to_string(), a.to_string(), state.to_string())) {
             let observation = pomdp.observation_function.get(&(o.to_string(), a.to_string(), state.to_string())).unwrap();
@@ -143,37 +121,23 @@ fn update_beliefs(pomdp: &pomdp::POMDP, beliefs: &mut std::collections::HashMap<
         }
 
     }
-    *beliefs = normalize(beliefs, 1.0);
+    *beliefs = util::normalize(beliefs, 1.0);
 }
+
+
 
 fn main() {
     //let mdp: mdp::MDP = hex_world::create_mdp(0.9);
     //println!("{:?}", mdp);
     let pomdp = crying_baby::create_pomdp(0.9);
-    let mut beliefs = std::collections::HashMap::<String, f64>::new();
+    /*let mut beliefs = std::collections::HashMap::<String, f64>::new();
     for state in &pomdp.state_space {
         beliefs.insert(state.to_string(), 1.0);
     }
-    beliefs = normalize(&mut beliefs,1.0);
-    println!("beliefs = {:?}", beliefs);
-    println!("Ignore the baby!");
-    update_beliefs(&pomdp, &mut beliefs, &"ignore".to_string(), &"crying".to_string());
-    println!("beliefs = {:?}", beliefs);
-    println!("Feed the baby!");
-    update_beliefs(&pomdp, &mut beliefs, &"feed".to_string(), &"quiet".to_string());
-    println!("beliefs = {:?}", beliefs);
-    println!("Ignore the baby!");
-    update_beliefs(&pomdp, &mut beliefs, &"ignore".to_string(), &"quiet".to_string());
-    println!("beliefs = {:?}", beliefs);
-    println!("Ignore the baby!");
-    update_beliefs(&pomdp, &mut beliefs, &"ignore".to_string(), &"quiet".to_string());
-    println!("beliefs = {:?}", beliefs);
-    println!("Ignore the baby!");
-    update_beliefs(&pomdp, &mut beliefs, &"ignore".to_string(), &"crying".to_string());
-    println!("beliefs = {:?}", beliefs);
-    println!("Sing to the baby!");
-    update_beliefs(&pomdp, &mut beliefs, &"sing".to_string(), &"quiet".to_string());
-    println!("beliefs = {:?}", beliefs);
+    beliefs = util::normalize(&mut beliefs,1.0);*/
+    //pomdp::value_iteration(&pomdp, 1);
+    let result = pomdp::solve(1, pomdp);
+    println!("{:?}", result);
 
 }
 
@@ -215,6 +179,8 @@ mod tests {
     fn test_policy_iteration() {
         run_test(|| {
             let mdp = hex_world::create_mdp(0.9);
+            /*println!("{:?}", mdp);
+            assert!(false);*/
             let mut policy = PolicyIteration { pi: std::collections::HashMap::<String, String>::new(), k_max: 10 };
             policy.initialize(&mdp, &"E".to_string());
             policy_iteration(&mdp, &mut policy);
@@ -229,6 +195,39 @@ mod tests {
                 assert!(policy.pi.get(key).unwrap() == expected.get(key).unwrap());
             }
             //println!("Optimal policy = {:?}", policy);
+            //assert!(false);
+        })
+    }
+
+    #[test]
+    fn test_belief_update() {
+        run_test(|| {
+            let pomdp = crying_baby::create_pomdp(0.9);
+            let mut beliefs = std::collections::HashMap::<String, f64>::new();
+            for state in &pomdp.state_space {
+                beliefs.insert(state.to_string(), 1.0);
+            }
+            beliefs = util::normalize(&mut beliefs,1.0);
+            println!("beliefs = {:?}", beliefs);
+            println!("Ignore the baby!");
+            update_beliefs(&pomdp, &mut beliefs, &"ignore".to_string(), &"crying".to_string());
+            println!("beliefs = {:?}", beliefs);
+            println!("Feed the baby!");
+            update_beliefs(&pomdp, &mut beliefs, &"feed".to_string(), &"quiet".to_string());
+            println!("beliefs = {:?}", beliefs);
+            println!("Ignore the baby!");
+            update_beliefs(&pomdp, &mut beliefs, &"ignore".to_string(), &"quiet".to_string());
+            println!("beliefs = {:?}", beliefs);
+            println!("Ignore the baby!");
+            update_beliefs(&pomdp, &mut beliefs, &"ignore".to_string(), &"quiet".to_string());
+            println!("beliefs = {:?}", beliefs);
+            println!("Ignore the baby!");
+            update_beliefs(&pomdp, &mut beliefs, &"ignore".to_string(), &"crying".to_string());
+            println!("beliefs = {:?}", beliefs);
+            println!("Sing to the baby!");
+            update_beliefs(&pomdp, &mut beliefs, &"sing".to_string(), &"quiet".to_string());
+            println!("beliefs = {:?}", beliefs);
+            assert!(f64::powf(beliefs.get(&"sated".to_string()).unwrap() - 0.87697, 2.0).sqrt() < 0.0001);
             //assert!(false);
         })
     }

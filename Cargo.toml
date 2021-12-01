@@ -7,3 +7,4 @@ edition = "2018"
 
 [dependencies]
 nalgebra = "0.29.*"
+good_lp = "1.2.*"
