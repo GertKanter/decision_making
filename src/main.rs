@@ -136,7 +136,7 @@ fn main() {
     }
     beliefs = util::normalize(&mut beliefs,1.0);*/
     //pomdp::value_iteration(&pomdp, 1);
-    let result = pomdp::solve(1, pomdp);
+    let result = pomdp::solve(3, pomdp);
     println!("{:?}", result);
 
 }
@@ -229,6 +229,77 @@ mod tests {
             println!("beliefs = {:?}", beliefs);
             assert!(f64::powf(beliefs.get(&"sated".to_string()).unwrap() - 0.87697, 2.0).sqrt() < 0.0001);
             //assert!(false);
+        })
+    }
+
+    #[test]
+    fn test_one_step_pomdp_plan() {
+        run_test(|| {
+            let pomdp = crying_baby::create_pomdp(0.9);
+            let result = pomdp::solve(1, pomdp);
+            println!("{:?}", result);
+            assert!(result.big_gamma[0][0] == -10.0);
+            assert!(result.big_gamma[0][1] == 0.0);
+        })
+    }
+
+    #[test]
+    fn test_two_step_pomdp_plan() {
+        run_test(|| {
+            let pomdp = crying_baby::create_pomdp(0.9);
+            let result = pomdp::solve(2, pomdp);
+            println!("{:?}", result);
+            assert!(result.big_gamma[0][0] == -15.0);
+            assert!(result.big_gamma[0][1] == -5.0);
+            assert!(result.big_gamma[1][0] == -19.0);
+            assert!(result.big_gamma[1][1] == -0.9);
+        })
+    }
+
+    #[test]
+    fn test_three_step_pomdp_plan() {
+        run_test(|| {
+            let pomdp = crying_baby::create_pomdp(0.9);
+            let result = pomdp::solve(3, pomdp);
+            println!("{:?}", result);
+            assert!(result.big_gamma.len() == 2);
+            assert!((result.big_gamma[0][0] - (-16.179)).abs() < 0.0000001);
+            assert!((result.big_gamma[0][1] - (-6.179)).abs() < 0.0000001);
+            assert!((result.big_gamma[1][0] - (-24.22)).abs() < 0.0000001);
+            assert!((result.big_gamma[1][1] - (-2.4831)).abs() < 0.0000001);
+        })
+    }
+    #[test]
+    fn test_set_configuration() {
+        run_test(|| {
+            let pomdp = crying_baby::create_pomdp(0.9);
+            let mut plan = pomdp::ConditionalPlan::default();
+            plan.action = "root".to_string();
+
+            let mut sub = pomdp::ConditionalPlan::default();
+            sub.action = "sub1".to_string();
+            let mut sub2 = pomdp::ConditionalPlan::default();
+            sub2.action = "sub2".to_string();
+
+            let mut sub3 = pomdp::ConditionalPlan::default();
+            sub3.action = "sub3".to_string();
+            let mut sub_bt = std::collections::BTreeMap::<String, Box<pomdp::ConditionalPlan>>::new();
+            sub_bt.insert("quiet".to_string(), Box::new(sub3));
+            sub2.subplans = Some(sub_bt);
+
+            let mut bt = std::collections::BTreeMap::<String, Box<pomdp::ConditionalPlan>>::new();
+            bt.insert("quiet".to_string(), Box::new(sub));
+            bt.insert("crying".to_string(), Box::new(sub2));
+            plan.subplans = Some(bt);
+            let mut configuration = vec![0, 2, 1, 2];
+            //println!("starting config = {:?}", configuration);
+            println!("plan before set_configuration == {:?}", plan);
+            plan.set_configuration(&pomdp, &mut configuration);
+            println!("plan after set_configuration == {:?}", plan);
+            assert!(plan.action == "ignore");
+            assert!(plan.subplans.as_ref().unwrap().get("quiet").unwrap().action == "feed");
+            assert!(plan.subplans.as_ref().unwrap().get("crying").unwrap().action == "sing");
+            assert!(plan.subplans.as_ref().unwrap().get("crying").unwrap().subplans.as_ref().unwrap().get("quiet").unwrap().action == "ignore");
         })
     }
 
